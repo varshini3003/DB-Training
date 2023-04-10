@@ -16,8 +16,8 @@ select * from departments;
 SELECT SUM(employees.salary) as total_salary
 FROM employees
     JOIN departments ON employees.department_id = departments.department_id
-    JOIN locations ON departments.location_id = locations.location_id
-WHERE locations.city = 'Tokyo' AND employees.first_name <> 'Nancy';
+    JOIN locations ON departments.location_id = locations.location_id  
+WHERE locations.country_id = 'US' AND employees.first_name <> 'Nancy';
 
 --2.  Fetch all details of employees who has salary more than the avg salary by each department.
 
@@ -30,12 +30,13 @@ ORDER BY d.department_name;
 
 --3.	Write a SQL query to find the number of employees and its location whose salary is greater than or equal to 7000 and less than 10000
 
-SELECT COUNT(*) as num_employees, l.city
+SELECT COUNT(employee_id) as num_employees, l.city
 FROM employees e
     JOIN departments d ON e.department_id = e.department_id
     JOIN locations l ON d.location_id = l.location_id
-WHERE e.salary >= 7000 AND e.salary < 10000
-GROUP BY l.city;
+WHERE e.salary >= 7000 AND e.salary < 10000 
+GROUP BY l.city 
+HAVING num_employees > 100;
 
 --4.	Fetch max salary, min salary and avg salary by job and department. 
 -- Info:  grouped by department id and job id ordered by department id and max salary
@@ -103,17 +104,19 @@ GROUP BY d.department_name, c.country_name;
 
 SELECT 
   CONCAT(m.first_name, ' ', m.last_name) AS manager_name,
-  c.country_name,
+  l.country_id,
   COUNT(e.employee_id) AS employee_count
 FROM 
   employees e
   JOIN departments d ON e.department_id = d.department_id
   JOIN locations l ON d.location_id = l.location_id
-  JOIN countries c ON l.country_id = c.country_id
-  JOIN employees m ON m.employee_id = d.manager_id
+  JOIN employees m ON m.employee_id = e.manager_id
 GROUP BY 
-  manager_name, c.country_name;
+  manager_name, l.country_id
+ORDER BY manager_name;
 
+SELECT * from employees where manager_id=121;
+  
 --11.	 Group salaries of employees in 4 buckets eg: 0-10000, 10000-20000,.. (Like the previous question) but now group by department and categorize it like below.
 --Eg : 
 --DEPT ID 0-10000 10000-20000
@@ -130,6 +133,8 @@ FROM
   JOIN departments d ON e.department_id = d.department_id
 GROUP BY 
   d.department_id;
+
+select * from employees where department_id=90;
 
 --12.	 Display employee count by country and the avg salary 
 --Eg : 
@@ -157,9 +162,15 @@ GROUP BY
 
 SELECT 
   d.department_id AS Dept_ID,
-  IFNULL(COUNT(CASE WHEN r.region_name = 'Americas' THEN 1 END), 0) AS America,
-  IFNULL(COUNT(CASE WHEN r.region_name = 'Europe' THEN 1 END), 0) AS Europe,
-  IFNULL(COUNT(CASE WHEN r.region_name = 'Asia' THEN 1 END), 0) AS Asia
+  (CASE WHEN
+      COUNT(CASE WHEN r.region_name = 'Americas' THEN 1 END) = 0 THEN '-' ELSE TO_VARCHAR(COUNT(r.region_name = 'Americas')) 
+   END) AS America,
+  (CASE WHEN
+      COUNT(CASE WHEN r.region_name = 'Europe' THEN 1 END) = 0 THEN '-' ELSE TO_VARCHAR(COUNT(r.region_name = 'Europe')) 
+   END) AS Europe,
+  (CASE WHEN
+      COUNT(CASE WHEN r.region_name = 'Asia' THEN 1 END) = 0 THEN '-' ELSE TO_VARCHAR(COUNT(r.region_name = 'Asia')) 
+   END) AS Asia
 FROM 
   employees e
   JOIN departments d ON e.department_id = d.department_id
@@ -169,12 +180,20 @@ FROM
 GROUP BY 
   d.department_id;
 
---14.  Select the list of all employees who work either for one or more departments or have not yet joined / allocated to any department
+--14.  Select the list of all employees who work either for two or more departments or have not yet joined / allocated to any department
 
 SELECT e.*
 FROM 
   employees e
-LEFT JOIN departments d ON e.department_id = d.department_id;
+  LEFT JOIN departments d ON e.department_id = d.department_id;
+
+SELECT e.employee_id
+FROM 
+    employees e
+    LEFT JOIN departments d ON e.department_id = d.department_id
+GROUP BY e.employee_id
+HAVING COUNT(DISTINCT e.department_id) >= 2 OR COUNT(DISTINCT e.department_id) = 0;
+
 
 --15.	write a SQL query to find the employees and their respective managers. Return the first name, last name of the employees and their managers
 
@@ -204,6 +223,7 @@ FROM employees e
     LEFT JOIN departments d ON e.department_id = d.department_id
 ORDER BY department_name, e.last_name;
 
+
 --18.	The HR decides to make an analysis of the employees working in every department. Help him to determine the salary given in average per department and the total number of employees working in a department.  List the above along with the department id, department name
 
 SELECT d.department_id, d.department_name, AVG(e.salary) AS avg_salary, COUNT(e.employee_id) AS total_employees
@@ -211,6 +231,8 @@ FROM departments d
     LEFT JOIN employees e ON d.department_id = e.department_id
 GROUP BY d.department_id, d.department_name
 ORDER BY d.department_id;
+
+select * from employees where department_id=30;
 
 --19.	Write a SQL query to combine each row of the employees with each row of the jobs to obtain a consolidated results. (i.e.) Obtain every possible combination of rows from the employees and the jobs relation.
 
@@ -231,13 +253,14 @@ WHERE r.region_name IN ('Europe', 'Asia');
 SELECT CONCAT(first_name, ' ', last_name) AS full_name, email
 FROM employees
 WHERE SUBSTRING(last_name, -2, 1) = 'e' 
-AND department_id NOT IN (SELECT department_id FROM departments WHERE department_name IN ('Finance', 'Shipping'));
+AND department_id NOT IN (SELECT department_id FROM departments WHERE department_name IN ('Finance', 'Shipping'))
+ORDER BY full_name;
   
 --22.	 Display the first name and phone number of employees who have less than 50 months of experience
 
-SELECT first_name, phone_number
+SELECT first_name, phone_number, hire_date, DATEDIFF(MONTH, hire_date, GETDATE())
 FROM employees
-WHERE DATEDIFF(MONTH, GETDATE(), hire_date) < 50;
+WHERE DATEDIFF(MONTH, hire_date, GETDATE()) < 50;
 
 --23.	 Display Employee id, first_name, last name, hire_date and salary for employees who has the highest salary for each hiring year. (For eg: John and Deepika joined on year 2023,  and john has a salary of 5000, and Deepika has a salary of 6500. Output should show Deepika’s details only).
 
@@ -247,6 +270,15 @@ WHERE e1.salary = (
   SELECT MAX(salary)
   FROM employees e2
   WHERE YEAR(e1.hire_date) = YEAR(e2.hire_date)) 
-ORDER BY e1.hire_date;
+ORDER BY year(e1.hire_date), e1.salary desc;
+
+
+SELECT employee_id, first_name, last_name, hire_date, salary
+FROM (
+  SELECT employee_id, first_name, last_name, hire_date, salary,
+    ROW_NUMBER() OVER (PARTITION BY YEAR(hire_date) ORDER BY salary DESC) AS row_num
+  FROM employees
+) 
+WHERE row_num = 1;
 
 
